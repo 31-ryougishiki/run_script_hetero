@@ -18,6 +18,9 @@ export HCCL_OP_EXPANSION_MODE="AIV"
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:$LD_PRELOAD
 export ASCEND_RT_VISIBLE_DEVICES=$1
 
+# 启动前诊断：确认 launcher 传入的卡数与当前 DP rank 的 TP size 一致。
+echo "[run_dp_template] visible_devices='$1' dp_rank=$4 dp_size=$3 tp_size_arg=$7"
+
 # ===== 脚本2额外设置 =====
 export PYTHONPATH=/opt/its/z30055003/zero_interrupt/vllm-ascend:$PYTHONPATH
 export PYTHONPATH=/opt/its/z30055003/zero_interrupt/vllm:$PYTHONPATH
