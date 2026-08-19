@@ -65,4 +65,20 @@ vllm serve /opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self \
       {"dp_rank": 1, "tp_size": 4},
       {"dp_rank": 2, "tp_size": 4},
       {"dp_rank": 3, "tp_size": 4}
-    ]'
+    ]' \
+    --kv-transfer-config \
+    '{"kv_connector": "MooncakeHybridConnector",
+    "kv_role": "kv_producer",
+    "kv_port": "30000",
+    "engine_id": "0",
+    "kv_connector_extra_config": {
+                "prefill": {
+                        "dp_size": 4,
+                        "tp_size": 4
+                },
+                "decode": {
+                        "dp_size": 16,
+                        "tp_size": 1
+                }
+        }
+    }'
