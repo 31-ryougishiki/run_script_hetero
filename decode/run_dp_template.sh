@@ -30,7 +30,7 @@ vllm serve /opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self \
     --tensor-parallel-size $7 \
     --enable-expert-parallel \
     --seed 1024 \
-    --served-model-name auto \
+    --served-model-name dsv4 \
     --max-model-len 1048576 \
     --max-num-batched-tokens 120 \
     --max-num-seqs 60 \
