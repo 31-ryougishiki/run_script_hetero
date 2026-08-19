@@ -16,15 +16,19 @@ export TASK_QUEUE_ENABLE=1
 export VLLM_ASCEND_ENABLE_FLASHCOMM1=1
 export HCCL_OP_EXPANSION_MODE="AIV"
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:$LD_PRELOAD
-export ASCEND_RT_VISIBLE_DEVICES=$1
 
 # 启动前诊断：确认 launcher 传入的卡数与当前 DP rank 的 TP size 一致。
-echo "[run_dp_template] visible_devices='$1' dp_rank=$4 dp_size=$3 tp_size_arg=$7"
+echo "[run_dp_template] launcher_arg visible_devices='$1' dp_rank=$4 dp_size=$3 tp_size_arg=$7"
 
 # ===== 脚本2额外设置 =====
 export PYTHONPATH=/opt/its/z30055003/zero_interrupt/vllm-ascend:$PYTHONPATH
 export PYTHONPATH=/opt/its/z30055003/zero_interrupt/vllm:$PYTHONPATH
 source /vllm-workspace/vllm-ascend/vllm_ascend/_cann_ops_custom/vendors/custom_transformer/bin/set_env.bash
+
+# 可见卡必须在 set_env.bash 之后设置：某些 CANN set_env 脚本会重写或
+# 重置 ASCEND_RT_VISIBLE_DEVICES，导致 launcher 传入的 4 卡变成 3 卡。
+export ASCEND_RT_VISIBLE_DEVICES=$1
+echo "[run_dp_template] effective ASCEND_RT_VISIBLE_DEVICES='$ASCEND_RT_VISIBLE_DEVICES' dp_rank=$4 tp_size_arg=$7"
 
 # ===== vllm serve 参数（按脚本1顺序重排） =====
 # 参数说明：$1=可见卡列表, $2=vllm端口, $3=DP总数, $4=当前DP rank,
