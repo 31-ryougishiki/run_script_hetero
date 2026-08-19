@@ -105,11 +105,6 @@ def run_command(visible_devices, dp_rank, vllm_engine_port, rank_tp_size):
         dp_rpc_port,
         str(rank_tp_size),
     ]
-    print(
-        f"[launch] dp_rank={dp_rank} port={vllm_engine_port} "
-        f"visible_devices={visible_devices} tp_size={rank_tp_size}",
-        flush=True,
-    )
     subprocess.run(command, check=True)
 
 if __name__ == "__main__":
