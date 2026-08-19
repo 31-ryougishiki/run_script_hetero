@@ -83,16 +83,6 @@ if hetero_tp_sizes is not None:
 else:
     per_dp_tp_sizes = [tp_size] * dp_size
 
-total_cards = sum(per_dp_tp_sizes)
-local_cards = sum(
-    per_dp_tp_sizes[dp_rank_start : dp_rank_start + dp_size_local]
-)
-print(
-    f"Heterogeneous DP/TP launcher: per_dp_tp_sizes={per_dp_tp_sizes}, "
-    f"total_cards={total_cards}, local_cards={local_cards}, "
-    f"local_dp_ranks={list(range(dp_rank_start, dp_rank_start + dp_size_local))}"
-)
-
 def run_command(visible_devices, dp_rank, vllm_engine_port, rank_tp_size):
     command = [
         "bash",
