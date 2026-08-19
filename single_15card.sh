@@ -3,6 +3,7 @@ nic_name="xxxx" # change to your own nic name
 local_ip=xx.xx.xx.1 # change to your own ip
 
 export HCCL_IF_IP=$local_ip
+export VLLM_HOST_IP=$local_ip
 export GLOO_SOCKET_IFNAME=$nic_name
 export TP_SOCKET_IFNAME=$nic_name
 export HCCL_SOCKET_IFNAME=$nic_name
@@ -59,7 +60,7 @@ vllm serve /opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self \
     --kv-transfer-config \
     '{"kv_connector": "MooncakeHybridConnector",
     "kv_role": "kv_producer",
-    "kv_port": "30000",
+    "kv_port": "36000",
     "engine_id": "0",
     "kv_connector_extra_config": {
                 "prefill": {

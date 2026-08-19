@@ -1,9 +1,11 @@
 nic_name="eth2"
 local_ip=7.246.78.76
 export HCCL_IF_IP=$local_ip
+export VLLM_HOST_IP=$local_ip
 export GLOO_SOCKET_IFNAME=$nic_name
 export TP_SOCKET_IFNAME=$nic_name
 export HCCL_SOCKET_IFNAME=$nic_name
+export ASCEND_CONNECT_TIMEOUT=60000
 export VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS=30000
 export HCCL_EXEC_TIMEOUT=204
 export HCCL_CONNECT_TIMEOUT=120
@@ -69,7 +71,7 @@ vllm serve /opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self \
     --kv-transfer-config \
     '{"kv_connector": "MooncakeHybridConnector",
     "kv_role": "kv_producer",
-    "kv_port": "30000",
+    "kv_port": "36000",
     "engine_id": "0",
     "kv_connector_extra_config": {
                 "prefill": {

@@ -83,10 +83,17 @@ if __name__ == "__main__":
 
     processes = []
     num_cards = dp_size_local * tp_size
+    device_offset = dp_rank_start * tp_size
     for i in range(dp_size_local):
         dp_rank = dp_rank_start + i
         vllm_engine_port = vllm_start_port + i
-        visible_devices = ",".join(str(x) for x in range(i * tp_size, (i + 1) * tp_size))
+        visible_devices = ",".join(
+            str(x)
+            for x in range(
+                device_offset + i * tp_size,
+                device_offset + (i + 1) * tp_size,
+            )
+        )
         process = multiprocessing.Process(target=run_command,
                                         args=(visible_devices, dp_rank,
                                                 vllm_engine_port))
