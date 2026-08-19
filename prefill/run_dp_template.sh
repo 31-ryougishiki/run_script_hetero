@@ -5,7 +5,14 @@ export VLLM_HOST_IP=$local_ip
 export GLOO_SOCKET_IFNAME=$nic_name
 export TP_SOCKET_IFNAME=$nic_name
 export HCCL_SOCKET_IFNAME=$nic_name
-export ASCEND_CONNECT_TIMEOUT=60000
+# Mooncake/ADXL 超时（ms）：首个跨节点 HcclCommPrepare 在 15P+16D
+# 并发启动时可能超过默认值，适当放大建链窗口。
+export ASCEND_CONNECT_TIMEOUT=180000
+export ASCEND_TRANSFER_TIMEOUT=300000
+# Mooncake Python 侧 batch 整体超时（s，默认仅 30s）。必须大于
+# ASCEND_CONNECT_TIMEOUT，否则第一次建链未完成 batch_transfer_sync_read
+# 就提前返回 -1，表现为 "Sync batch data transfer timeout"。
+export MC_TRANSFER_TIMEOUT=600
 export VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS=30000
 export HCCL_EXEC_TIMEOUT=204
 export HCCL_CONNECT_TIMEOUT=120
