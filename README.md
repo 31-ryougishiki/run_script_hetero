@@ -129,6 +129,9 @@ bash automated_hetero_test.sh all
 bash single_instance_test.sh prefill list
 bash single_instance_test.sh decode list
 
+# 单测 prefill：按顺序自动跑完全部内置用例
+bash single_instance_test.sh prefill all
+
 # 单测 prefill（仅异构用例，均至少 7 卡）
 bash single_instance_test.sh prefill dp3_tp4                    # 12 卡，DSA-CP+SP
 bash single_instance_test.sh prefill dp2_tp43                   # 7 卡，DSA-CP+SP

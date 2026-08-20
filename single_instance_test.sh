@@ -6,6 +6,7 @@
 #
 # 用法:
 #   bash single_instance_test.sh <prefill|decode> list
+#   bash single_instance_test.sh <prefill|decode> all
 #   bash single_instance_test.sh <prefill|decode> <case>
 #   bash single_instance_test.sh <prefill|decode> custom
 #
@@ -181,6 +182,27 @@ case "$ROLE" in
     prefill|decode) ;;
     *) echo "role must be prefill or decode" >&2; exit 2 ;;
 esac
+
+if [ "$MODE" = "all" ]; then
+    failed_cases=""
+    log "按顺序自动执行 $ROLE 全部内置用例: $(list_cases)"
+    for single_case in $(list_cases); do
+        log "========== 开始执行 $ROLE/$single_case =========="
+        if KEEP_RUNNING=0 bash "$SCRIPT_DIR/single_instance_test.sh" \
+            "$ROLE" "$single_case"; then
+            log "========== $ROLE/$single_case 通过 =========="
+        else
+            log "========== $ROLE/$single_case 失败 =========="
+            failed_cases="$failed_cases $single_case"
+        fi
+    done
+    if [ -n "$failed_cases" ]; then
+        log "以下用例失败:$failed_cases"
+        exit 1
+    fi
+    log "$ROLE 全部内置用例通过。"
+    exit 0
+fi
 
 set_case_vars
 
