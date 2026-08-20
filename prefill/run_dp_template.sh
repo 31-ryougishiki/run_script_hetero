@@ -5,10 +5,12 @@
 # 以下环境变量由 launch_online_dp.py 注入：
 #   HETERO_DP_CONFIG_JSON       异构 DP/TP 配置（可选）
 #   KV_TRANSFER_CONFIG_JSON     KV connector 完整配置（含 prefill/decode 拓扑）
-# 场景只改 start_server.sh 中的 dp/tp 参数即可，本模板无需修改。
+#   ADDITIONAL_CONFIG_JSON      additional_config（含 enable_dsa_cp 开关）
+#   VLLM_ASCEND_ENABLE_FLASHCOMM1  按 --enable-sp 注入
+# 场景只改 start_server.sh 中的 dp/tp/开关参数即可，本模板无需修改。
 
-nic_name="eth2"
-local_ip=7.246.78.76
+nic_name="${PREFILL_NIC_NAME:-eth2}"
+local_ip="${PREFILL_LOCAL_IP:-7.246.78.76}"
 model_path=/opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self
 
 export HCCL_IF_IP=$local_ip
@@ -33,7 +35,8 @@ export OMP_NUM_THREADS=10
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export HCCL_BUFFSIZE=2560
 export TASK_QUEUE_ENABLE=1
-export VLLM_ASCEND_ENABLE_FLASHCOMM1=1
+# VLLM_ASCEND_ENABLE_FLASHCOMM1 由 launch_online_dp.py 按 --enable-sp 注入，
+# 在 source set_env.bash 之后根据 HETERO_ENABLE_SP 标记强制恢复。
 export HCCL_OP_EXPANSION_MODE="AIV"
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:$LD_PRELOAD
 
@@ -44,9 +47,16 @@ source /vllm-workspace/vllm-ascend/vllm_ascend/_cann_ops_custom/vendors/custom_t
 
 # 可见卡必须在 set_env.bash 之后设置：某些 CANN set_env 脚本会重写或
 # 重置 ASCEND_RT_VISIBLE_DEVICES，导致 launcher 传入的 4 卡变成 3 卡。
+# set_env.bash 也可能重写 SP 环境变量，因此这里按 launcher 标记再次恢复。
+if [ "${HETERO_ENABLE_SP:-0}" = "1" ]; then
+    export VLLM_ASCEND_ENABLE_FLASHCOMM1=1
+else
+    unset VLLM_ASCEND_ENABLE_FLASHCOMM1
+fi
 export ASCEND_RT_VISIBLE_DEVICES=$1
 
 : "${KV_TRANSFER_CONFIG_JSON:?launch_online_dp.py must export KV_TRANSFER_CONFIG_JSON}"
+: "${ADDITIONAL_CONFIG_JSON:?launch_online_dp.py must export ADDITIONAL_CONFIG_JSON}"
 HETERO_DP_ARGS=()
 if [ -n "${HETERO_DP_CONFIG_JSON:-}" ]; then
     HETERO_DP_ARGS=(--heterogeneous-dp-config "$HETERO_DP_CONFIG_JSON")
@@ -79,7 +89,7 @@ vllm serve "$model_path" \
     --gpu-memory-utilization 0.9 \
     --quantization ascend \
     --enforce-eager \
-    --additional-config '{"enable_cpu_binding": true, "enable_shared_expert_dp": true,  "enable_dsa_cp": true}' \
+    --additional-config "$ADDITIONAL_CONFIG_JSON" \
     --no-enable-eplb \
     "${HETERO_DP_ARGS[@]}" \
     --kv-transfer-config "$KV_TRANSFER_CONFIG_JSON"

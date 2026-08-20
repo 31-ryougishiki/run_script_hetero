@@ -88,6 +88,8 @@ def parse_args():
                         help="Local data parallel size.")
     parser.add_argument("--dp-rank-start", type=int, default=0,
                         help="Starting rank for data parallel.")
+    parser.add_argument("--device-start", type=int, default=0,
+                        help="Physical device id offset for this service.")
     parser.add_argument("--dp-address", type=str, required=True,
                         help="IP address for data parallel master node.")
     parser.add_argument("--dp-rpc-port", type=str, default=12345,
@@ -113,6 +115,12 @@ def parse_args():
                         help=("Remote decode pool logical TP size. For "
                               "heterogeneous decode this is the pool "
                               "descriptor (e.g. max per-DP tp)."))
+    parser.add_argument("--enable-dsa-cp", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="Enable DSA context parallelism (default: on).")
+    parser.add_argument("--enable-sp", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="Enable FlashComm1 sequence parallelism (default: on).")
     return parser.parse_args()
 
 
@@ -124,9 +132,29 @@ dp_size_local = args.dp_size_local
 if dp_size_local == -1:
     dp_size_local = dp_size
 dp_rank_start = args.dp_rank_start
+device_start = args.device_start
 dp_address = args.dp_address
 dp_rpc_port = args.dp_rpc_port
 vllm_start_port = args.vllm_start_port
+
+if args.enable_dsa_cp and not args.enable_sp:
+    print("--enable-dsa-cp requires --enable-sp for DeepSeek-V4.")
+    sys.exit(1)
+if args.enable_sp:
+    os.environ["VLLM_ASCEND_ENABLE_FLASHCOMM1"] = "1"
+    os.environ["HETERO_ENABLE_SP"] = "1"
+else:
+    os.environ.pop("VLLM_ASCEND_ENABLE_FLASHCOMM1", None)
+    os.environ["HETERO_ENABLE_SP"] = "0"
+
+additional_config = {"enable_cpu_binding": True}
+if args.enable_sp:
+    # Non-hetero TP>1 with shared_expert_dp forces SP on internally, so keep
+    # it only for the SP path. Pure-DP/no-SP scenarios stay SP-free.
+    additional_config["enable_shared_expert_dp"] = True
+if args.enable_dsa_cp:
+    additional_config["enable_dsa_cp"] = True
+os.environ["ADDITIONAL_CONFIG_JSON"] = json.dumps(additional_config)
 
 if hetero_tp_sizes is not None:
     per_dp_tp_sizes = [int(x) for x in hetero_tp_sizes.split(",")]
@@ -208,7 +236,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     processes = []
-    device_offset = sum(per_dp_tp_sizes[:dp_rank_start])
+    device_offset = device_start + sum(per_dp_tp_sizes[:dp_rank_start])
     for i in range(dp_size_local):
         dp_rank = dp_rank_start + i
         rank_tp_size = per_dp_tp_sizes[dp_rank]

@@ -1,2 +1,4 @@
 *.pyc
 __pycache__/
+hetero_test_results/
+single_instance_results/

@@ -5,9 +5,11 @@
 # 以下环境变量由 launch_online_dp.py 注入：
 #   HETERO_DP_CONFIG_JSON       异构 DP/TP 配置（可选）
 #   KV_TRANSFER_CONFIG_JSON     KV connector 完整配置（含 prefill/decode 拓扑）
+#   ADDITIONAL_CONFIG_JSON      additional_config（含 enable_dsa_cp 开关）
+#   VLLM_ASCEND_ENABLE_FLASHCOMM1  按 --enable-sp 注入
 
-nic_name="eth2" # change to your own nic name
-local_ip=7.246.78.75 # change to your own ip
+nic_name="${DECODE_NIC_NAME:-eth2}" # change to your own nic name
+local_ip="${DECODE_LOCAL_IP:-7.246.78.75}" # change to your own ip
 model_path=/opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self
 
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:$LD_PRELOAD
@@ -34,9 +36,15 @@ export OMP_PROC_BIND=false
 export OMP_NUM_THREADS=10
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export HCCL_BUFFSIZE=1024
+if [ "${HETERO_ENABLE_SP:-0}" = "1" ]; then
+    export VLLM_ASCEND_ENABLE_FLASHCOMM1=1
+else
+    unset VLLM_ASCEND_ENABLE_FLASHCOMM1
+fi
 export ASCEND_RT_VISIBLE_DEVICES=$1
 
 : "${KV_TRANSFER_CONFIG_JSON:?launch_online_dp.py must export KV_TRANSFER_CONFIG_JSON}"
+: "${ADDITIONAL_CONFIG_JSON:?launch_online_dp.py must export ADDITIONAL_CONFIG_JSON}"
 HETERO_DP_ARGS=()
 if [ -n "${HETERO_DP_CONFIG_JSON:-}" ]; then
     HETERO_DP_ARGS=(--heterogeneous-dp-config "$HETERO_DP_CONFIG_JSON")
@@ -73,12 +81,4 @@ vllm serve "$model_path" \
     --compilation-config '{"cudagraph_mode": "FULL_DECODE_ONLY"}' \
     "${HETERO_DP_ARGS[@]}" \
     --kv-transfer-config "$KV_TRANSFER_CONFIG_JSON" \
-    --additional-config '{
-        "ascend_compilation_config":{
-            "enable_npugraph_ex":true,
-            "enable_static_kernel":false
-        },
-        "enable_cpu_binding":true,
-        "multistream_overlap_shared_expert":true,
-        "recompute_scheduler_enable":true
-    }'
+    --additional-config "$ADDITIONAL_CONFIG_JSON"

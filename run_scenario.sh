@@ -5,9 +5,9 @@
 #   ./run_scenario.sh <2|3|hetero> <prefill|decode|proxy>
 #
 # 场景:
-#   2: prefill dp15tp1  + decode dp16tp1
-#   3: prefill dp4tp4   + decode dp8tp2
-#   hetero: prefill dp4tp(3,4,4,4) + decode dp16tp1 (当前基线)
+#   2: prefill dp15tp1  + decode dp16tp1   (纯 DP，SP/DSA-CP 关闭)
+#   3: prefill dp4tp4   + decode dp8tp2    (prefill DSA-CP+SP 开启)
+#   hetero: prefill dp4tp(3,4,4,4) + decode dp16tp1 (prefill DSA-CP+SP 开启)
 #
 # 场景1（prefill dp1tp15）依赖 DSA-CP tp>8 支持，已按需求回退，不再提供。
 SCENARIO=${1:?usage: run_scenario.sh <2|3|hetero> <prefill|decode|proxy>}
@@ -21,15 +21,21 @@ case "$SCENARIO" in
         ;;
     2)
         PREFILL_DP=15; PREFILL_TP=1;  PREFILL_HETERO=""
+        PREFILL_DSA_CP=0; PREFILL_SP=0
         DECODE_DP=16;  DECODE_TP=1;  DECODE_HETERO=""
+        DECODE_DSA_CP=0; DECODE_SP=0
         ;;
     3)
         PREFILL_DP=4;  PREFILL_TP=4;  PREFILL_HETERO=""
+        PREFILL_DSA_CP=1; PREFILL_SP=1
         DECODE_DP=8;   DECODE_TP=2;  DECODE_HETERO=""
+        DECODE_DSA_CP=0; DECODE_SP=0
         ;;
     hetero)
         PREFILL_DP=4;  PREFILL_TP=4;  PREFILL_HETERO="3,4,4,4"
+        PREFILL_DSA_CP=1; PREFILL_SP=1
         DECODE_DP=16;  DECODE_TP=1;  DECODE_HETERO=""
+        DECODE_DSA_CP=0; DECODE_SP=0
         ;;
     *)
         echo "Unknown scenario: $SCENARIO (expected 2, 3 or hetero)" >&2
@@ -42,13 +48,15 @@ case "$ROLE" in
         cd "$SCRIPT_DIR/prefill" || exit 1
         exec bash ./start_server.sh \
             "$PREFILL_DP" "$PREFILL_TP" "$PREFILL_HETERO" \
-            "$DECODE_DP" "$DECODE_TP"
+            "$DECODE_DP" "$DECODE_TP" \
+            "$PREFILL_DSA_CP" "$PREFILL_SP"
         ;;
     decode)
         cd "$SCRIPT_DIR/decode" || exit 1
         exec bash ./start_server.sh \
             "$DECODE_DP" "$DECODE_TP" "$DECODE_HETERO" \
-            "$PREFILL_DP" "$PREFILL_TP"
+            "$PREFILL_DP" "$PREFILL_TP" \
+            "$DECODE_DSA_CP" "$DECODE_SP"
         ;;
     proxy)
         export PREFILL_DP_SIZE="$PREFILL_DP"
