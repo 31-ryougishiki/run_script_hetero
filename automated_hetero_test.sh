@@ -176,6 +176,14 @@ collect_log() {
     [ -s "$output" ] || echo "(no log captured)" >"$output"
 }
 
+collect_case_logs() {
+    local outdir="$1"
+    mkdir -p "$outdir"
+    collect_log "$NODE_PREFILL" /tmp/hetero_test_prefill.log "$outdir/prefill.log"
+    collect_log "$NODE_DECODE" /tmp/hetero_test_decode.log "$outdir/decode.log"
+    collect_log "$NODE_PREFILL" /tmp/hetero_test_proxy.log "$outdir/proxy.log"
+}
+
 run_case() {
     local name="$1" pref_dp="$2" pref_tp="$3" pref_hetero="$4" \
           dec_dp="$5" dec_tp="$6" pref_dsa="$7" pref_sp="$8"
@@ -201,30 +209,31 @@ run_case() {
 
     if ! start_prefill "$pref_dp" "$pref_tp" "$pref_hetero" \
                       "$dec_dp" "$dec_tp" "$pref_dsa" "$pref_sp"; then
+        collect_case_logs "$outdir"
         return 1
     fi
     if ! start_decode "$dec_dp" "$dec_tp" "" "$pref_dp" "$pref_tp" 0 0; then
+        collect_case_logs "$outdir"
         return 1
     fi
 
     if ! wait_for_services "$NODE_PREFILL" "$VLLM_PORT_BASE" "$pref_dp" \
                           "$STARTUP_TIMEOUT" "prefill"; then
-        collect_log "$NODE_PREFILL" /tmp/hetero_test_prefill.log "$outdir/prefill.log"
-        collect_log "$NODE_DECODE" /tmp/hetero_test_decode.log "$outdir/decode.log"
+        collect_case_logs "$outdir"
         return 1
     fi
     if ! wait_for_services "$NODE_DECODE" "$VLLM_PORT_BASE" "$dec_dp" \
                           "$STARTUP_TIMEOUT" "decode"; then
-        collect_log "$NODE_PREFILL" /tmp/hetero_test_prefill.log "$outdir/prefill.log"
-        collect_log "$NODE_DECODE" /tmp/hetero_test_decode.log "$outdir/decode.log"
+        collect_case_logs "$outdir"
         return 1
     fi
 
     if ! start_proxy "$pref_dp" "$dec_dp"; then
+        collect_case_logs "$outdir"
         return 1
     fi
     if ! wait_for_port "$NODE_PREFILL" "$PROXY_PORT" 120 "proxy"; then
-        collect_log "$NODE_PREFILL" /tmp/hetero_test_proxy.log "$outdir/proxy.log"
+        collect_case_logs "$outdir"
         return 1
     fi
 
@@ -237,9 +246,7 @@ run_case() {
         log "场景 $name 存在失败请求，继续收集日志。"
     fi
 
-    collect_log "$NODE_PREFILL" /tmp/hetero_test_prefill.log "$outdir/prefill.log"
-    collect_log "$NODE_DECODE" /tmp/hetero_test_decode.log "$outdir/decode.log"
-    collect_log "$NODE_PREFILL" /tmp/hetero_test_proxy.log "$outdir/proxy.log"
+    collect_case_logs "$outdir"
     log "场景 $name 结果目录: $outdir"
     log "========== 场景 $name 完成 =========="
 }

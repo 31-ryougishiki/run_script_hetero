@@ -247,10 +247,20 @@ if __name__ == "__main__":
         device_offset += rank_tp_size
         process = multiprocessing.Process(
             target=run_command,
+            name=f"dp{dp_rank}",
             args=(visible_devices, dp_rank, vllm_engine_port, rank_tp_size),
         )
         processes.append(process)
         process.start()
 
+    failed = False
     for process in processes:
         process.join()
+        if process.exitcode not in (0, None):
+            print(
+                f"DP engine process for dp_rank={process.name} failed with "
+                f"exit code {process.exitcode}."
+            )
+            failed = True
+    if failed:
+        sys.exit(1)
