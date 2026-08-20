@@ -188,6 +188,17 @@ def run_client(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = parse_args()
+    print(
+        "TEST_ENV HCCL_IF_IP=%s HCCL_SOCKET_IFNAME=%s "
+        "ASCEND_RT_VISIBLE_DEVICES=%s ASCEND_CONNECT_TIMEOUT=%s "
+        "ASCEND_TRANSFER_TIMEOUT=%s MC_TRANSFER_TIMEOUT=%s",
+        os.getenv("HCCL_IF_IP", ""),
+        os.getenv("HCCL_SOCKET_IFNAME", ""),
+        os.getenv("ASCEND_RT_VISIBLE_DEVICES", ""),
+        os.getenv("ASCEND_CONNECT_TIMEOUT", ""),
+        os.getenv("ASCEND_TRANSFER_TIMEOUT", ""),
+        os.getenv("MC_TRANSFER_TIMEOUT", ""),
+    )
     if args.role == "server":
         run_server(args)
     else:
