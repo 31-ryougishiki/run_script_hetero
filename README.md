@@ -142,6 +142,9 @@ bash single_instance_test.sh prefill dp4_tp3444_no_sp_no_dsa    # 15 卡，异�
 bash single_instance_test.sh prefill dp2_tp43_no_dsa_sp         # 7 卡，异构 no-DSA-CP/SP
 bash single_instance_test.sh prefill dp4_tp3444_no_dsa_sp       # 15 卡，异构 no-DSA-CP/SP
 
+# 单测 decode：按顺序自动跑完全部内置用例
+bash single_instance_test.sh decode all
+
 # 单测 decode（仅异构用例，均 7 卡，no-SP/no-DSA）
 bash single_instance_test.sh decode dp4_tp2122    # 2+1+2+2=7 卡
 bash single_instance_test.sh decode dp4_tp2212    # 2+2+1+2=7 卡
