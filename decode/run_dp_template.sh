@@ -1,5 +1,14 @@
+# ===== 参数说明 =====
+# $1=可见卡列表, $2=vllm端口, $3=DP总数, $4=当前DP rank,
+# $5=DP master地址, $6=DP rpc端口, $7=当前DP rank的TP size。
+#
+# 以下环境变量由 launch_online_dp.py 注入：
+#   HETERO_DP_CONFIG_JSON       异构 DP/TP 配置（可选）
+#   KV_TRANSFER_CONFIG_JSON     KV connector 完整配置（含 prefill/decode 拓扑）
+
 nic_name="eth2" # change to your own nic name
 local_ip=7.246.78.75 # change to your own ip
+model_path=/opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self
 
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libjemalloc.so.2:$LD_PRELOAD
 export HCCL_OP_EXPANSION_MODE="AIV"
@@ -13,8 +22,8 @@ export VLLM_HOST_IP=$local_ip
 export GLOO_SOCKET_IFNAME=$nic_name
 export TP_SOCKET_IFNAME=$nic_name
 export HCCL_SOCKET_IFNAME=$nic_name
-# Mooncake/ADXL 超时（ms）：首个跨节点 HcclCommPrepare 在 15P+16D
-# 并发启动时可能超过默认值，适当放大建链窗口。
+# Mooncake/ADXL 超时（ms）：首个跨节点 HcclCommPrepare 在大量
+# prefill/decode worker 并发启动时可能超过默认值，适当放大建链窗口。
 export ASCEND_CONNECT_TIMEOUT=180000
 export ASCEND_TRANSFER_TIMEOUT=300000
 # Mooncake Python 侧 batch 整体超时（s，默认仅 30s）。必须大于
@@ -27,7 +36,13 @@ export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export HCCL_BUFFSIZE=1024
 export ASCEND_RT_VISIBLE_DEVICES=$1
 
-vllm serve /opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self \
+: "${KV_TRANSFER_CONFIG_JSON:?launch_online_dp.py must export KV_TRANSFER_CONFIG_JSON}"
+HETERO_DP_ARGS=()
+if [ -n "${HETERO_DP_CONFIG_JSON:-}" ]; then
+    HETERO_DP_ARGS=(--heterogeneous-dp-config "$HETERO_DP_CONFIG_JSON")
+fi
+
+vllm serve "$model_path" \
     --host 0.0.0.0 \
     --port $2 \
     --data-parallel-size $3 \
@@ -56,22 +71,8 @@ vllm serve /opt/its/model/DeepSeek-V4-Flash-w8a8-mtp-self \
     --quantization ascend \
     --speculative-config '{"num_speculative_tokens": 1,"method": "mtp","enforce_eager": true}' \
     --compilation-config '{"cudagraph_mode": "FULL_DECODE_ONLY"}' \
-    --kv-transfer-config \
-    '{"kv_connector": "MooncakeHybridConnector",
-    "kv_role": "kv_consumer",
-    "kv_port": "36200",
-    "engine_id": "1",
-    "kv_connector_extra_config": {
-                "prefill": {
-                        "dp_size": 4,
-                        "tp_size": 4
-                },
-                "decode": {
-                        "dp_size": 16,
-                        "tp_size": 1
-                }
-        }
-    }' \
+    "${HETERO_DP_ARGS[@]}" \
+    --kv-transfer-config "$KV_TRANSFER_CONFIG_JSON" \
     --additional-config '{
         "ascend_compilation_config":{
             "enable_npugraph_ex":true,
