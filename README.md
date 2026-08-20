@@ -69,8 +69,7 @@ PREFILL_DP_SIZE=4 DECODE_DP_SIZE=8 ./proxy.sh
   `--heterogeneous-dp-config`，而是通过环境变量
   `HETERO_DP_CONFIG_JSON` / `KV_TRANSFER_CONFIG_JSON` 注入完整拓扑。
 - prefill/decode 的 `dp_size`、`tp_size` 在 `kv_connector_extra_config`
-  中任意搭配（TP 受 `<= o_groups(8)` 约束）；DeepSeek-V4 的 KV cache
-  在每个 prefill TP rank 上全量复制，`MooncakeHybridConnector` 按请求
-  哈希选择一个 prefill TP rank 拉取，不再要求 `prefill_tp >= decode_tp`。
+  中参数化（TP 受 `<= o_groups(8)` 约束）。TP 关系仍保持原仓约束：
+  要求 `prefill_tp >= decode_tp`。
 - `run_dp_template.sh` 中仍需按节点修改 `nic_name`、`local_ip`、
   `model_path` 等环境。
