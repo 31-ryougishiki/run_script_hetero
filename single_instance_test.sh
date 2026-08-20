@@ -50,7 +50,19 @@ cleanup() {
     pkill -f 'vllm serve /opt/its/model' >/dev/null 2>&1 || true
     sleep 2
 }
-trap cleanup EXIT
+
+save_instance_log() {
+    if [ -n "${OUTDIR:-}" ]; then
+        mkdir -p "$OUTDIR" 2>/dev/null || true
+        cp -f "$INSTANCE_LOG" "$OUTDIR/instance.log" 2>/dev/null || true
+    fi
+}
+
+exit_trap() {
+    cleanup
+    save_instance_log
+}
+trap exit_trap EXIT
 
 wait_for_ports() {
     local host="$1" base="$2" count="$3" timeout="$4" label="$5"
@@ -100,7 +112,8 @@ sum_hetero_cards() {
 }
 
 max_tp() {
-    local sizes="$1" tp="$2" size max="$tp"
+    local sizes="$1" tp="$2" size
+    local max="$tp"
     if [ -n "$sizes" ]; then
         IFS=',' read -ra parts <<<"$sizes"
         for size in "${parts[@]}"; do
@@ -284,6 +297,5 @@ python3 "$SCRIPT_DIR/request_hetero_test.py" \
     --concurrency "$CONCURRENCY" \
     --outdir "$OUTDIR"
 
-cp -f "$INSTANCE_LOG" "$OUTDIR/instance.log" 2>/dev/null || true
 log "结果目录: $OUTDIR"
-log "单实例测试完成。"
+log "单实例测试完成。推理日志将在退出清理后保存到 $OUTDIR/instance.log。"
