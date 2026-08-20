@@ -36,6 +36,11 @@ export OMP_PROC_BIND=false
 export OMP_NUM_THREADS=10
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export HCCL_BUFFSIZE=1024
+
+export PYTHONPATH=/opt/its/z30055003/zero_interrupt/vllm-ascend:$PYTHONPATH
+export PYTHONPATH=/opt/its/z30055003/zero_interrupt/vllm:$PYTHONPATH
+source /vllm-workspace/vllm-ascend/vllm_ascend/_cann_ops_custom/vendors/custom_transformer/bin/set_env.bash
+
 if [ "${HETERO_ENABLE_SP:-0}" = "1" ]; then
     export VLLM_ASCEND_ENABLE_FLASHCOMM1=1
 else
